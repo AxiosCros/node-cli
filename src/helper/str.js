@@ -1,9 +1,11 @@
 'use strict';
 
 const debug = require('../debug');
+const os = require('os');
 const camelCase = require('camelcase');
 const fs = require('./fs');
 const is = require('./is');
+const { Duplex } = require('stream');
 
 function _str(s) {
   return is.invalid(s) ? '' : s;
@@ -100,7 +102,38 @@ function _fixed(content, length = 10, fillPosition = 'l', fill = ' ') {
   return content;
 }
 
+class StringBuilder {
+  constructor(str = '', eol = null) {
+    this.eol = eol === null ? os.EOL : eol;
+    this.stream = new Duplex();
+    this.append(str);
+  }
+  append(str) {
+    if (is.invalid(str)) {
+      str = '';
+    }
+    if (!is.string(str)) {
+      debug.stack('Invalid parameter: "str", Only supported string type');
+    }
+    this.stream.write(str);
+    return this;
+  }
+  appendLine(str) {
+    this.append(str);
+    this.append(this.eol);
+    return this;
+  }
+  appendFormat(str, params = {}, left = '${', right = '}') {
+    this.append(_render(str, params, left, right));
+    return this;
+  }
+  toString() {
+    return this.stream.toString();
+  }
+}
+
 module.exports = {
+  StringBuilder,
   _str,
   _fixed,
   _render,
